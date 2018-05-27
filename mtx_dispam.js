@@ -87,13 +87,18 @@ function loopPost(body) {
 }
 
 function listPost(url) {
-	let reg = /members\/.+?(\d+)/;
-	let userID = url.match(reg)[1];
-	http_request("/forums/search/member?user_id=" + userID, (res, body) => {
+	http_request(url, (res, body) => {
 		let searchURL = res.headers["location"].replace("https://www.mtxserv.fr", "");
 		for (let i = 1; i <= 10; i++) {
 			http_request(searchURL + "?page=" + i, (res, body) => {
 				loopPost(body);
+				if ( i === 10 ) {
+					let RegButton = /<a href="(\/forums\/search\/\d+\/older\?before=d+)"/s;
+					let match = RegButton.exec(body);
+					if (match && match[1]) {
+						listPost(match[1]);
+					}
+				}
 			});
 		}
 	});
@@ -159,7 +164,7 @@ readline.question("Username: ", (username) => {
 						} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
 							type = answer;
 						}
-						listPost(victim);
+						listPost("/forums/search/member?user_id=" + url.match(/members\/.+?(\d+)/)[1]);
 						readline.close();
 					});
 				}
