@@ -57,11 +57,11 @@ function dislike(url, data) {
 	let RegProfile = /posts\/(\d+)/;
 	let RegComment = /\/comments\/(\d+)/;
 	if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
-		http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/1', data);
+		http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/3', data);
 	} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
-		http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/1', data);
+		http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/3', data);
 	} else { // post
-		http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/1', data);
+		http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/3', data);
 	}
 }
 
