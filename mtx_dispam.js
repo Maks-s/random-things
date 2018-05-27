@@ -91,10 +91,11 @@ function listPost(url) {
 	let userID = url.match(reg)[1];
 	http_request("/forums/search/member?user_id=" + userID, (res, body) => {
 		let searchURL = res.headers["location"].replace("https://www.mtxserv.fr", "");
-		http_request(searchURL, (res, body) => {
-			// mettre ici une boucle pour chaque page
-			loopPost(body);
-		});
+		for (let i = 1; i <= 10; i++) {
+			http_request(searchURL + "?page=" + i, (res, body) => {
+				loopPost(body);
+			});
+		}
 	});
 }
 
