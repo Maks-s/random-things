@@ -13,6 +13,7 @@ var http_options = {
 		"Cookie": ""
 	}
 };
+var type = 11; // default reaction on INFO
 
 // <url> [data] <callback>
 function http_request(urlPath, callback, data="") {
@@ -52,16 +53,17 @@ function http_request(urlPath, callback, data="") {
 	request.end();
 }
 
-function dislike(url, data) {
+// <url to message> <data> <type (2:Like, 3:Dislike, 4:Agree, 6:Disagree)>
+function react(url, data) {
 	let RegPost = /\.\d+\/post-(\d+)/;
 	let RegProfile = /posts\/(\d+)/;
 	let RegComment = /\/comments\/(\d+)/;
 	if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
-		http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/3', data);
+		http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/' + type, data);
 	} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
-		http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/3', data);
+		http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/' + type, data);
 	} else { // post
-		http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/3', data);
+		http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/' + type, data);
 	}
 }
 
@@ -76,7 +78,7 @@ function loopPost(body) {
 			let keepMatch = match[1];
 			setTimeout(() => { // Seems like spamming REALLY HARD isn't allowed
 				console.log(keepMatch);
-				dislike(keepMatch, data);
+				react(keepMatch, data);
 			}, time);
 			time += 100;
 		}
@@ -130,12 +132,36 @@ function login(username, password, callback) {
 readline.question("Username: ", (username) => {
 	readline.question("Password: ", (password) => {
 		login(username, password, () => {
-			readline.question("URL of profile to dislike: ", (victim) => {
+			readline.question("URL of profile to react: ", (victim) => {
 				if ( !victim.startsWith("https://www.mtxserv.fr/forums/members/") )
 					console.log("Merci d'être intelligent");
-				else
-					listPost(victim);
-				readline.close();
+				else {
+					readline.question("Like (Y) Dislike (N) Angry (G) Disagree (X) Agree (A) or a number\n", (answer) => {
+						if ( isNaN(answer) ) {
+							switch (answer) {
+								case 'Y':
+									type = 2;
+									break;
+								case 'N':
+									type = 3;
+									break;
+								case 'G':
+									type = 8;
+									break;
+								case 'X':
+									type = 6;
+									break;
+								case 'A':
+									type = 4;
+									break;
+							}
+						} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
+							type = answer;
+						}
+						listPost(victim);
+						readline.close();
+					});
+				}
 			});
 		});
 	});
