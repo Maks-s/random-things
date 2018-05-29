@@ -16,6 +16,7 @@ var http_options = {
 var type = 11; // default reaction on INFO
 var time = 0;
 var reactData = "";
+var delay = 50;
 
 // <url> [data] <callback>
 function http_request(urlPath, callback, data="") {
@@ -92,7 +93,7 @@ function loopPost(body) {
 				console.log(keepMatch);
 				react(keepMatch);
 			}, time);
-			time += 10;
+			time += delay;
 		}
 
 	} while (match);
@@ -153,9 +154,9 @@ readline.question("Username: ", (username) => {
 		login(username, password, () => {
 			readline.question("URL of profile to react: ", (victim) => {
 				if ( !victim.startsWith("https://www.mtxserv.fr/forums/members/") )
-					console.log("Merci d'être intelligent");
+					console.log("Be smart. Thanks.");
 				else {
-					readline.question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n", (answer) => {
+					readline.question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n> ", (answer) => {
 						if ( isNaN(answer) ) {
 							switch (answer) {
 								case 'Y':
@@ -177,8 +178,12 @@ readline.question("Username: ", (username) => {
 						} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
 							type = answer;
 						}
-						listPost("/forums/search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
-						readline.close();
+						readline.question("Delay between each reaction (Recommended: 50)\n> ", (del) => {
+							if ( !isNaN(del) )
+								delay = parseInt(del);
+							listPost("/forums/search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
+							readline.close();
+						});
 					});
 				}
 			});
