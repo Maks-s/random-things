@@ -65,7 +65,7 @@ function react(url) {
 			http_request("/forums/reactions/unreacts/profile_post_comment/" + RegComment.exec(url)[1], reactData);
 		} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
 			http_request("/forums/reactions/unreacts/profile_post/" + RegProfile.exec(url)[1], reactData);
-		} else if (  ) { // post
+		} else if ( url.search(/\/threads\/(?:.+?\.\d+|\d+)\/$/) === -1 ) { // post
 			http_request("/forums/reactions/unreacts/post/" + RegPost.exec(url)[1], reactData);
 		}
 	} else {
