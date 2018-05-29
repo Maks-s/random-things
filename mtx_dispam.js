@@ -8,12 +8,14 @@ const readline = rl.createInterface({
 var http_options = {
 	host: "www.mtxserv.fr",
 	headers: {
-		"User-Agent": "Just spamming dislike, don't worry",
+		"User-Agent": "Maks reacts script",
 		"Connection": "keep-alive",
 		"Cookie": ""
 	}
 };
 var type = 11; // default reaction on INFO
+var time = 0;
+var reactData = "";
 
 // <url> [data] <callback>
 function http_request(urlPath, callback, data="") {
@@ -54,23 +56,33 @@ function http_request(urlPath, callback, data="") {
 }
 
 // <url to message> <data> <type (2:Like, 3:Dislike, 4:Agree, 6:Disagree)>
-function react(url, data) {
-	let RegPost = /\.\d+\/post-(\d+)/;
+function react(url) {
+	let RegPost = /\d+\/post-(\d+)/;
 	let RegProfile = /posts\/(\d+)/;
 	let RegComment = /\/comments\/(\d+)/;
-	if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
-		http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/' + type, data);
-	} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
-		http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/' + type, data);
-	} else { // post
-		http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/' + type, data);
+	if ( type === 404 ) {
+		if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
+			http_request("/forums/reactions/unreacts/profile_post_comment/" + RegComment.exec(url)[1], reactData);
+		} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
+			http_request("/forums/reactions/unreacts/profile_post/" + RegProfile.exec(url)[1], reactData);
+		} else if (  ) { // post
+			http_request("/forums/reactions/unreacts/post/" + RegPost.exec(url)[1], reactData);
+		}
+	} else {
+		if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
+			http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/' + type, reactData);
+		} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
+			http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/' + type, reactData);
+		} else if ( url.search(/\/threads\/(?:.+?\.\d+|\d+)\/$/) === -1 ) { // post
+			http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/' + type, reactData);
+		}
 	}
 }
 
 function loopPost(body) {
 	let reg = /<h3 class="contentRow-title">\s*?<a href="(.+?)">/gs;
-	let data = "_xfRequestUri=%2Fforums%2Fthreads%2F&_xfResponseType=json&_xfWithData=1&_xfToken=" + encodeURIComponent(/name="_xfToken" value="(.+?)"/.exec(body)[1]);
-	let time = 0;
+	if ( reactData === "" )
+		reactData = "_xfRequestUri=%2Fforums%2Fthreads%2F&_xfResponseType=json&_xfWithData=1&_xfToken=" + encodeURIComponent(/name="_xfToken" value="(.+?)"/.exec(body)[1]);
 	let match;
 	do {
 		match = reg.exec(body);
@@ -78,9 +90,9 @@ function loopPost(body) {
 			let keepMatch = match[1];
 			setTimeout(() => { // Seems like spamming REALLY HARD isn't allowed
 				console.log(keepMatch);
-				react(keepMatch, data);
+				react(keepMatch);
 			}, time);
-			time += 100;
+			time += 10;
 		}
 
 	} while (match);
@@ -88,17 +100,17 @@ function loopPost(body) {
 
 function listPost(url) {
 	http_request(url, (res, body) => {
+		if ( !res.headers["location"] )
+			return;
 		let searchURL = res.headers["location"].replace("https://www.mtxserv.fr", "");
 		for (let i = 1; i <= 10; i++) {
 			http_request(searchURL + "?page=" + i, (res, body) => {
 				loopPost(body);
-				if ( i === 10 ) {
-					let RegButton = /<a href="(\/forums\/search\/\d+\/older\?before=d+)"/s;
+					let RegButton = /<a href="(\/forums\/search\/\d+\/older\?before=\d+)"/s;
 					let match = RegButton.exec(body);
 					if (match && match[1]) {
 						listPost(match[1]);
 					}
-				}
 			});
 		}
 	});
@@ -133,6 +145,7 @@ function login(username, password, callback) {
 			callback();
 		});
 	});
+	callback();
 }
 
 readline.question("Username: ", (username) => {
@@ -142,7 +155,7 @@ readline.question("Username: ", (username) => {
 				if ( !victim.startsWith("https://www.mtxserv.fr/forums/members/") )
 					console.log("Merci d'être intelligent");
 				else {
-					readline.question("Like (Y) Dislike (N) Angry (G) Disagree (X) Agree (A) or a number\n", (answer) => {
+					readline.question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n", (answer) => {
 						if ( isNaN(answer) ) {
 							switch (answer) {
 								case 'Y':
@@ -151,8 +164,8 @@ readline.question("Username: ", (username) => {
 								case 'N':
 									type = 3;
 									break;
-								case 'G':
-									type = 8;
+								case 'R':
+									type = 404;
 									break;
 								case 'X':
 									type = 6;
@@ -164,7 +177,7 @@ readline.question("Username: ", (username) => {
 						} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
 							type = answer;
 						}
-						listPost("/forums/search/member?user_id=" + url.match(/members\/.+?(\d+)/)[1]);
+						listPost("/forums/search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
 						readline.close();
 					});
 				}
