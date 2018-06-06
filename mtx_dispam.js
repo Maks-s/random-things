@@ -1,12 +1,11 @@
-const http = require("https");
 const rl = require("readline");
 const readline = rl.createInterface({
 	input: process.stdin,
 	output: process.stdout
 });
+var http;
 
 var http_options = {
-	host: "www.mtxserv.fr",
 	headers: {
 		"User-Agent": "Maks reacts script",
 		"Connection": "keep-alive",
@@ -17,6 +16,7 @@ var type = 11; // default reaction on INFO
 var time = 0;
 var reactData = "";
 var delay = 50;
+var uri = "";
 
 // <url> [data] <callback>
 function http_request(urlPath, callback, data="") {
@@ -25,7 +25,7 @@ function http_request(urlPath, callback, data="") {
 		callback = data;
 		data = transition;
 	}
-	http_options["path"] = urlPath;
+	http_options["path"] = uri + urlPath;
 	if ( data == "" ) {
 		http_options["method"] = "GET";
 		http_options["headers"]["Content-Type"] = "text/html; charset=UTF-8";
@@ -61,21 +61,29 @@ function react(url) {
 	let RegPost = /\d+\/post-(\d+)/;
 	let RegProfile = /posts\/(\d+)/;
 	let RegComment = /\/comments\/(\d+)/;
-	if ( type === 404 ) {
+	if (type === 502) {
 		if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
-			http_request("/forums/reactions/unreacts/profile_post_comment/" + RegComment.exec(url)[1], reactData);
+			http_request("profile-posts/comments/" + RegComment.exec(url)[1] + "/like", reactData);
 		} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
-			http_request("/forums/reactions/unreacts/profile_post/" + RegProfile.exec(url)[1], reactData);
+			http_request("profile-posts/" + RegProfile.exec(url)[1] + "/like", reactData);
 		} else if ( url.search(/\/threads\/(?:.+?\.\d+|\d+)\/$/) === -1 ) { // post
-			http_request("/forums/reactions/unreacts/post/" + RegPost.exec(url)[1], reactData);
+			http_request("posts/" + RegPost.exec(url)[1] + "/like", reactData);
+		}
+	} else if (type === 404) {
+		if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
+			http_request("reactions/unreacts/profile_post_comment/" + RegComment.exec(url)[1], reactData);
+		} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
+			http_request("reactions/unreacts/profile_post/" + RegProfile.exec(url)[1], reactData);
+		} else if ( url.search(/\/threads\/(?:.+?\.\d+|\d+)\/$/) === -1 ) { // post
+			http_request("reactions/unreacts/post/" + RegPost.exec(url)[1], reactData);
 		}
 	} else {
 		if ( url.search(/\/comments\//) > 0 ) { // comment on profile post
-			http_request("/forums/reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/' + type, reactData);
+			http_request("reactions/react/profile_post_comment/" + RegComment.exec(url)[1] + '/' + type, reactData);
 		} else if ( url.search(/\/profile-posts\//) > 0 ) { // profile post
-			http_request("/forums/reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/' + type, reactData);
+			http_request("reactions/react/profile_post/" + RegProfile.exec(url)[1] + '/' + type, reactData);
 		} else if ( url.search(/\/threads\/(?:.+?\.\d+|\d+)\/$/) === -1 ) { // post
-			http_request("/forums/reactions/react/post/" + RegPost.exec(url)[1] + '/' + type, reactData);
+			http_request("reactions/react/post/" + RegPost.exec(url)[1] + '/' + type, reactData);
 		}
 	}
 }
@@ -103,11 +111,11 @@ function listPost(url) {
 	http_request(url, (res, body) => {
 		if ( !res.headers["location"] )
 			return;
-		let searchURL = res.headers["location"].replace("https://www.mtxserv.fr", "");
+		let searchURL = res.headers["location"].replace(RegExp("^https?://(?:www\.)?[a-zA-Z-_]+?\.[a-zA-Z]{2,4}" + uri), "");
 		for (let i = 1; i <= 10; i++) {
-			http_request(searchURL + "?page=" + i, (res, body) => {
+			http_request(searchURL, (res, body) => {
 				loopPost(body);
-					let RegButton = /<a href="(\/forums\/search\/\d+\/older\?before=\d+)"/s;
+					let RegButton = /<a href=".+?\/(search\/\d+\/older\?before=\d+)"/s;
 					let match = RegButton.exec(body);
 					if (match && match[1]) {
 						listPost(match[1]);
@@ -118,7 +126,7 @@ function listPost(url) {
 }
 
 function login(username, password, callback) {
-	http_request("/forums/login/login", (res, body) => {
+	http_request("login/login", (res, body) => {
 		let reg = /(.+?)=(.+?);/;
 		for ( let header of res.headers["set-cookie"] ) {
 			let cookie = reg.exec(header);
@@ -130,7 +138,7 @@ function login(username, password, callback) {
 			+ "&login=" + encodeURIComponent(username)
 			+ "&password=" + encodeURIComponent(password);
 
-		http_request("/forums/login/login", data, (res, body) => {
+		http_request("login/login", data, (res, body) => {
 
 			http_options["headers"]["Cookie"] += ";";
 			if (!res.headers["location"]) {
@@ -149,43 +157,70 @@ function login(username, password, callback) {
 	callback();
 }
 
-readline.question("Username: ", (username) => {
-	readline.question("Password: ", (password) => {
-		login(username, password, () => {
-			readline.question("URL of profile to react: ", (victim) => {
-				if ( !victim.startsWith("https://www.mtxserv.fr/forums/members/") )
-					console.log("Be smart. Thanks.");
-				else {
-					readline.question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n> ", (answer) => {
-						if ( isNaN(answer) ) {
-							switch (answer) {
-								case 'Y':
-									type = 2;
-									break;
-								case 'N':
-									type = 3;
-									break;
-								case 'R':
-									type = 404;
-									break;
-								case 'X':
-									type = 6;
-									break;
-								case 'A':
-									type = 4;
-									break;
-							}
-						} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
-							type = answer;
+readline.question("Website url (with http(s)://): ", (webURL) => {
+	if ( !/^https?:\/\/(?:www\.)?[a-zA-Z-_]+?\.[a-zA-Z]{2,4}/.test(webURL) ) {
+		console.log("Give me a real URL please");
+		readline.close();
+		process.exit();
+	}
+	
+	http_options["host"] = /https?:\/\/((?:www\.)?[a-zA-Z-_]+?\.[a-zA-Z]{2,4})/.exec(webURL)[1];
+	uri = /^https?:\/\/(?:www\.)?[a-zA-Z-_]+?\.[a-zA-Z]{2,4}(.*)/.exec(webURL)[1];
+	if ( uri.slice(-1) !== "/" )
+		uri += "/";
+	http = ( /^(https?)/.exec(webURL)[1] === "http" ) ? require("http") : require("https");
+
+	readline.question("Username: ", (username) => {
+		readline.question("Password: ", (password) => {
+			login(username, password, () => {
+				readline.question("URL of profile to react: ", (victim) => {
+					if ( !victim.startsWith(/^(https?)/.exec(webURL)[1] + "://" + http_options["host"] + uri + "members/") ) {
+						console.log("Be smart. Thanks.");
+						readline.close();
+						process.exit();
+					}
+					readline.question("Does the website have Reactions addon? (Y/N): ", (yesno) => {
+						if (yesno === 'Y') {
+							readline.question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n> ", (answer) => {
+								if ( isNaN(answer) ) {
+									switch (answer) {
+										case 'Y':
+										type = 2;
+										break;
+										case 'N':
+										type = 3;
+										break;
+										case 'R':
+										type = 404;
+										break;
+										case 'X':
+										type = 6;
+										break;
+										case 'A':
+										type = 4;
+										break;
+									}
+								} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
+									type = answer;
+								}
+								readline.question("Delay between each reaction (Default: 50)\n> ", (del) => {
+									if ( !isNaN(del) )
+										delay = parseInt(del);
+									listPost("search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
+									readline.close();
+								});
+							});
+						} else {
+							type = 502;
+							readline.question("Delay between each reaction (Default: 50)\n> ", (del) => {
+								if ( !isNaN(del) )
+									delay = parseInt(del);
+								listPost("search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
+								readline.close();
+							});
 						}
-						readline.question("Delay between each reaction (Recommended: 50)\n> ", (del) => {
-							if ( !isNaN(del) )
-								delay = parseInt(del);
-							listPost("/forums/search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
-							readline.close();
-						});
 					});
-				}
+				});
 			});
 		});
 	});
