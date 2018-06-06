@@ -2,8 +2,8 @@
 #### Stuff I made who doesn't need their own repo
 Pull Requests are welcome
 
-## mtx_dispam.js
-Node.js script which spam reactions on a mTxServ forum account ( can be used on other XenForo forums I think )
+## xen_dispam.js
+Node.js script which spam reactions (if addon is installed) or like on a XenForo forum
 Available reactions :
 - 1 happy
 - 2 like
