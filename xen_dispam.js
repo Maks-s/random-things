@@ -18,6 +18,14 @@ var reactData = "";
 var delay = 50;
 var uri = "";
 
+async function question(str) {
+	return new Promise((resolve, reject) => {
+		readline.question(str, (ans) => {
+			resolve(ans);
+		});
+	});
+}
+
 // <url> [data] <callback>
 function http_request(urlPath, callback, data="") {
 	if ( typeof callback === "string" ) {
@@ -134,7 +142,13 @@ function login(username, password, callback) {
 		}
 		http_options["headers"]["Cookie"] = http_options["headers"]["Cookie"].slice(0, -1);
 
-		data = "remember=1&ct_checkjs=2018&_xfToken=" + encodeURIComponent(/name="_xfToken" value="(.+?)"/.exec(body)[1])
+		let xfTokenReg = /name="_xfToken" value="(.+?)"/
+		if (body.search(xfTokenReg) === -1) {
+			console.log("Error getting csrf token, dumping body :\n", body);
+			return;
+		}
+
+		let data = "remember=1&ct_checkjs=2018&_xfToken=" + encodeURIComponent(xfTokenReg.exec(body)[1])
 			+ "&login=" + encodeURIComponent(username)
 			+ "&password=" + encodeURIComponent(password);
 
@@ -154,10 +168,9 @@ function login(username, password, callback) {
 			callback();
 		});
 	});
-	callback();
 }
 
-readline.question("Website url (with http(s)://): ", (webURL) => {
+async function start(webURL) {
 	if ( !/^https?:\/\/(?:www\.)?[a-zA-Z-_]+?\.[a-zA-Z]{2,4}/.test(webURL) ) {
 		console.log("Give me a real URL please");
 		readline.close();
@@ -168,60 +181,50 @@ readline.question("Website url (with http(s)://): ", (webURL) => {
 	uri = /^https?:\/\/(?:www\.)?[a-zA-Z-_]+?\.[a-zA-Z]{2,4}(.*)/.exec(webURL)[1];
 	if ( uri.slice(-1) !== "/" )
 		uri += "/";
-	http = ( /^(https?)/.exec(webURL)[1] === "http" ) ? require("http") : require("https");
+	http = require(/^(https?)/.exec(webURL)[1]);
 
-	readline.question("Username: ", (username) => {
-		readline.question("Password: ", (password) => {
-			login(username, password, () => {
-				readline.question("URL of profile to react: ", (victim) => {
-					if ( !victim.startsWith(/^(https?)/.exec(webURL)[1] + "://" + http_options["host"] + uri + "members/") ) {
-						console.log("Be smart. Thanks.");
-						readline.close();
-						process.exit();
-					}
-					readline.question("Does the website have Reactions addon? (Y/N): ", (yesno) => {
-						if (yesno === 'Y') {
-							readline.question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n> ", (answer) => {
-								if ( isNaN(answer) ) {
-									switch (answer) {
-										case 'Y':
-										type = 2;
-										break;
-										case 'N':
-										type = 3;
-										break;
-										case 'R':
-										type = 404;
-										break;
-										case 'X':
-										type = 6;
-										break;
-										case 'A':
-										type = 4;
-										break;
-									}
-								} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 ) {
-									type = answer;
-								}
-								readline.question("Delay between each reaction (Default: 50)\n> ", (del) => {
-									if ( !isNaN(del) )
-										delay = parseInt(del);
-									listPost("search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
-									readline.close();
-								});
-							});
-						} else {
-							type = 502;
-							readline.question("Delay between each reaction (Default: 50)\n> ", (del) => {
-								if ( !isNaN(del) )
-									delay = parseInt(del);
-								listPost("search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
-								readline.close();
-							});
-						}
-					});
-				});
-			});
-		});
+	let username = await question("Username: ");
+	let password = await question("Password: ");
+	login(username, password, async function() {
+		let victim = await question("URL of profile to react: ");
+
+		if ( !victim.startsWith(/^(https?)/.exec(webURL)[1] + "://" + http_options["host"] + uri + "members/") ) {
+			console.log("Be smart. Thanks.");
+			readline.close();
+			process.exit();
+		}
+
+		let yesno = await question("Does the website have Reactions addon? (Y/N): ");
+		if (yesno === 'Y') {
+			let answer = await question("Like (Y) Dislike (N) Unreact (R) Disagree (X) Agree (A) or a number\n> ");
+			if ( isNaN(answer) ) {
+				switch (answer) {
+					case 'Y':
+						type = 2;
+						break;
+					case 'N':
+						type = 3;
+						break;
+					case 'R':
+						type = 404;
+						break;
+					case 'X':
+						type = 6;
+						break;
+					case 'A':
+						type = 4;
+						break;
+				}
+			} else if ( answer = parseInt(answer) && answer > 0 && answer < 18 )
+				type = answer;
+		} else
+			type = 502;
+		let del = await question("Delay between each reaction (Default: 50)\n> ");
+		if ( !isNaN(del) )
+			delay = parseInt(del);
+		listPost("search/member?user_id=" + victim.match(/\/members\/.+?\.(\d+)\//)[1]);
+		readline.close();
 	});
-});
+}
+
+question("Website url (with http(s)://): ").then(start);
