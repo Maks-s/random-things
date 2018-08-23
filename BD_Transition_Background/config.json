@@ -1,0 +1,95 @@
+{
+    "info": {
+        "id": "transitioning-backgrounds",
+        "name": "Transitioning Backgrounds",
+        "authors": [
+            {
+                "name": "Maks",
+                "discord_id": "340975736037048332",
+                "github_username": "Maks-s"
+            },
+            {
+                "name": "Metalloriff",
+                "discord_id": "264163473179672576",
+                "github_username": "Metalloriff"
+            }
+        ],
+        "version": 1.0,
+        "description": "Allows you to set a list of backgrounds that will be transitioned between with several transition types, in order, or at random"
+    },
+    "main": "index.js",
+    "defaultConfig": [
+        {
+            "id": "default",
+            "settings": [
+                {
+                    "id": "images",
+                    "type": "array",
+                    "value": null,
+                    "text": "Backgrounds",
+                    "hint": "Images you want as your background",
+                    "min": 1,
+                    "settings": [
+                        {
+                            "category": "default",
+                            "settings": [
+                                {
+                                    "id": "image",
+                                    "type": "file",
+                                    "value": null,
+                                    "text": "Image"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "speed",
+                    "type": "number",
+                    "value": 3,
+                    "text": "Transition speed"
+                },
+                {
+                    "id": "delay",
+                    "type": "number",
+                    "value": 15,
+                    "text": "Time betweens transitions"
+                },
+                {
+                    "id": "effect",
+                    "type": "dropdown",
+                    "value": "fade",
+                    "options": [
+                        {"id": "fade", "value": "fade", "text": "Fade"},
+                        {"id": "fade-zoom", "value": "fade-zoom", "text": "Fade and zoom"},
+                        {"id": "slide-left", "value": "slide-left", "text": "Slide left"},
+                        {"id": "slide-right", "value": "slide-right", "text": "Slide right"},
+                        {"id": "slide-up", "value": "slide-up", "text": "Slide up"},
+                        {"id": "slide-down", "value": "slide-down", "text": "Slide down"},
+                        {"id": "shrink", "value": "shrink", "text": "Shrink"},
+                        {"id": "rotate-horizontal", "value": "rotate-horizontal", "text": "Rotate horizontally"},
+                        {"id": "rotate-vertical", "value": "rotate-vertical", "text": "Rotate vertically"}
+                    ]
+                },
+                {
+                    "id": "random",
+                    "type": "bool",
+                    "value": false,
+                    "text": "Images order is random"
+                },
+                {
+                    "id": "focus",
+                    "type": "bool",
+                    "value": false,
+                    "text": "Only run while Discord is focused"
+                },
+                {
+                    "id": "transparency",
+                    "type": "bool",
+                    "value": false,
+                    "text": "Force transparency. May look bad, only use this if you have a theme with no background, or no theme"
+                }
+            ]
+        }
+    ]
+}
